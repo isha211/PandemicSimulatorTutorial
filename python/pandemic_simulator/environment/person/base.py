@@ -176,6 +176,7 @@ class BasePerson(Person):
 
         self._state.infection_spread_multiplier = 0.8 if regulation.practice_good_hygiene else 1.0
         self._state.infection_spread_multiplier *= 0.6 if regulation.wear_facial_coverings else 1.0
+        # self._state.infection_spread_multiplier *= (1 - self._state.vaccination_state*0.2)
         self._state.infection_spread_multiplier = (
                 1 - (1 - self._state.infection_spread_multiplier) * self._regulation_compliance_prob)
 

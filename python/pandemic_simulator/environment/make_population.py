@@ -159,4 +159,8 @@ def make_population(sim_config: PandemicSimConfig) -> List[Person]:
                                regulation_compliance_prob=sim_config.regulation_compliance_prob,
                                init_state=PersonState(current_location=home, risk=infection_risk(age))))
 
+    for person in np.random.choice(persons, size=int(0.1*len(persons))):
+        person.state.anti_vaxxer = True
+
+
     return persons

@@ -24,7 +24,7 @@ class Risk(Enum):
     HIGH = 1
 
 
-@dataclass(frozen=True)
+@dataclass()
 class IndividualInfectionState:
     """State of the infection."""
     summary: InfectionSummary
@@ -32,6 +32,7 @@ class IndividualInfectionState:
     exposed_rnb: float = -1.
     is_hospitalized: bool = False
     shows_symptoms: bool = False
+    # vaccination_state: int = 0
 
 
 class InfectionModel(ABC):

@@ -35,6 +35,13 @@ class _AgeLimit(Enum):
     _200 = 200
 
 
+vacc_effect = {
+    0:1,
+    1:0.5,
+    2:0.2,
+    3:0.
+}
+
 _DEFAULT_HOSP_RATE_SYMP = {
     (_AgeLimit._4, Risk.LOW): 0.0279,
     (_AgeLimit._17, Risk.LOW): 0.0215,
@@ -86,7 +93,7 @@ def _get_age_limit_from_age(age: int) -> _AgeLimit:
     return value
 
 
-@dataclass(frozen=True)
+@dataclass()
 class SEIRInfectionState(IndividualInfectionState):
     """State of the infection according to SEIR."""
     label: _SEIRLabel = required()
@@ -293,6 +300,7 @@ class SEIRModel(InfectionModel):
         elif subject_state.label == _SEIRLabel.needs_hospitalization and subject_state.is_hospitalized:
             label = _SEIRLabel.hospitalized
         else:
+
             state_probs = self._model[subject_state.label][(_get_age_limit_from_age(subject_age), subject_risk)]
             if len(state_probs) != 0:
                 probs = np.array(list(state_probs.values()))

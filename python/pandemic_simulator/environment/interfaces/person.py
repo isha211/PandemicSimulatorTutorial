@@ -35,6 +35,9 @@ class PersonState:
     not_infection_probability: float = field(default=1., init=False)
     not_infection_probability_history: List[Tuple[LocationID, float]] = field(default_factory=list, init=False)
 
+    vaccination_state: int = field(init=False, default=0)
+    last_vaccinated_day: int = field(init=False, default=-1)
+    anti_vaxxer: bool = field(init=False, default=False)
 
 class Person(ABC):
     """Class that implements a sim person automaton with a pre-defined policy."""

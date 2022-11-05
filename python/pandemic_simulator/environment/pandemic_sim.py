@@ -18,9 +18,16 @@ from .make_population import make_population
 from .pandemic_testing_strategies import RandomPandemicTesting
 from .simulator_config import PandemicSimConfig
 from .simulator_opts import PandemicSimOpts
+from .vacc_program import vacc_program
 
 __all__ = ['PandemicSim', 'make_locations']
 
+vacc_effect = {
+    0:1,
+    1:0.5,
+    2:0.2,
+    3:0.
+}
 
 def make_locations(sim_config: PandemicSimConfig) -> List[Location]:
     return [config.location_type(loc_id=f'{config.location_type.__name__}_{i}',
@@ -48,6 +55,7 @@ class PandemicSim:
     _persons: Sequence[Person]
     _state: PandemicSimState
 
+    _vacc_program: vacc_program.VaccProgram
     def __init__(self,
                  locations: Sequence[Location],
                  persons: Sequence[Person],
@@ -86,6 +94,13 @@ class PandemicSim:
         self._new_time_slot_interval = new_time_slot_interval
         self._infection_update_interval = infection_update_interval
         self._infection_threshold = infection_threshold
+
+
+        self.num_vaccines_per_day = 100
+        self.num_old_people = len([p for p in persons if p.id.age>65])
+        self.num_adult_people = len([p for p in persons if p.id.age<=65 and p.id.age>18])
+        self.num_minors = len([p for p in persons if p.id.age<=18])
+        self._vacc_program = vacc_program.VaccProgram(self.num_old_people, self.num_adult_people, self.num_minors)
 
         self._type_to_locations = defaultdict(list)
         for loc in locations:
@@ -286,10 +301,12 @@ class PandemicSim:
             global_infection_summary = {s: 0 for s in sorted_infection_summary}
             for person in self._id_to_person.values():
                 # infection model step
+                inf_prob = (1 - person.state.not_infection_probability)*vacc_effect[person.state.vaccination_state]
+                # print(person.state.not_infection_probability, inf_prob)
                 person.state.infection_state = self._infection_model.step(person.state.infection_state,
                                                                           person.id.age,
                                                                           person.state.risk,
-                                                                          1 - person.state.not_infection_probability)
+                                                                          inf_prob)
 
                 if person.state.infection_state.exposed_rnb != -1.:
                     for vals in person.state.not_infection_probability_history:
@@ -310,6 +327,23 @@ class PandemicSim:
                     self._update_global_testing_state(new_test_result, person.state.test_result)
                     person.state.test_result = new_test_result
 
+                # if self._state.sim_time.day == self._vacc_program.phase_1_rollout:
+                #     if self._vacc_program.vacc_eligible(person, 1):
+                #         self._vacc_program.vacc_person(person.state)
+                #
+                # if self._state.sim_time.day == self._vacc_program.phase_2_rollout:
+                #     if self._vacc_program.vacc_eligible(person, 2):
+                #         self._vacc_program.vacc_person(person.state)
+                #
+                # if self._state.sim_time.day == self._vacc_program.phase_3_rollout:
+                #     if self._vacc_program.vacc_eligible(person, 3):
+                #         self._vacc_program.vacc_person(person.state)
+
+                num_vacc = self.num_vaccines_per_day
+                if self._vacc_program.vacc_eligible(person, self._state.sim_time.day, num_vacc):
+                    if self._vacc_program.vacc_person(person, self._state.sim_time.day):
+                        num_vacc -= 1
+
             self._state.global_infection_summary = global_infection_summary
         self._state.infection_above_threshold = (self._state.global_testing_state.summary[InfectionSummary.INFECTED]
                                                  >= self._infection_threshold)
@@ -320,6 +354,8 @@ class PandemicSim:
             self._contact_tracer.new_time_slot()
 
         # call sim time step
+        # print(self._state.sim_time.day)
+        # self.num_vaccines_per_day = 100
         self._state.sim_time.step()
 
     def step_day(self, hours_in_a_day: int = 24) -> None:
