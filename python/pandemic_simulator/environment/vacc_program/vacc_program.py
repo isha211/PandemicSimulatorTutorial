@@ -12,8 +12,8 @@ class VaccProgram:
 
     def __init__(self, num_old_people, num_adult_people, num_minors):
         self.vaccine_efficacy = 0.2
-        self.vaxx_start_day = 20
-        self.days_between_doses = 4
+        self.vaxx_start_day = 50
+        self.days_between_doses = 7
         self.num_old_people = num_old_people
         self.num_adult_people = num_adult_people
         self.num_minors = num_minors

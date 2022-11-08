@@ -24,9 +24,9 @@ __all__ = ['PandemicSim', 'make_locations']
 
 vacc_effect = {
     0:1,
-    1:0.5,
-    2:0.2,
-    3:0.
+    1:0.6,
+    2:0.36,
+    3:0.216
 }
 
 def make_locations(sim_config: PandemicSimConfig) -> List[Location]:
@@ -96,7 +96,7 @@ class PandemicSim:
         self._infection_threshold = infection_threshold
 
 
-        self.num_vaccines_per_day = 100
+        self.num_vaccines_per_day = 0.05*len(persons)
         self.num_old_people = len([p for p in persons if p.id.age>65])
         self.num_adult_people = len([p for p in persons if p.id.age<=65 and p.id.age>18])
         self.num_minors = len([p for p in persons if p.id.age<=18])
@@ -303,7 +303,7 @@ class PandemicSim:
                 # infection model step
                 inf_prob = (1 - person.state.not_infection_probability)*vacc_effect[person.state.vaccination_state]
                 # print(person.state.not_infection_probability, inf_prob)
-                person.state.infection_state = self._infection_model.step(person.state.infection_state,
+                person.state.infection_state = self._infection_model.step(person.state,
                                                                           person.id.age,
                                                                           person.state.risk,
                                                                           inf_prob)

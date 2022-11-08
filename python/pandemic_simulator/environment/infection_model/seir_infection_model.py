@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional, Tuple, cast
 import numpy as np
 from scipy.stats import truncnorm
 
-from ..interfaces import IndividualInfectionState, InfectionModel, InfectionSummary, Risk, globals
+from ..interfaces import IndividualInfectionState, InfectionModel, InfectionSummary, Risk, globals, PersonState
 from ...utils import required
 
 __all__ = ['SEIRInfectionState', 'SEIRModel', 'SpreadProbabilityParams']
@@ -37,9 +37,9 @@ class _AgeLimit(Enum):
 
 vacc_effect = {
     0:1,
-    1:0.5,
-    2:0.2,
-    3:0.
+    1:0.6,
+    2:0.36,
+    3:0.216
 }
 
 _DEFAULT_HOSP_RATE_SYMP = {
@@ -172,7 +172,7 @@ class SEIRModel(InfectionModel):
         death_rate_needs_hosp = death_rate_needs_hosp if death_rate_needs_hosp else _DEFAULT_DEATH_RATE_NEEDS_HOSP
         death_rate_needs_hosp = defaultdict(lambda: 1., death_rate_needs_hosp)
 
-        symp_transition = {
+        self.symp_transition = {
             (a, r): {
                 _SEIRLabel.needs_hospitalization: from_symp_to_hosp_rate * self._get_go_to_hospital_rate(
                     hosp_rate_symp[(a, r)],
@@ -222,11 +222,11 @@ class SEIRModel(InfectionModel):
             _SEIRLabel.symp: {
                 (a, r): {
                     _SEIRLabel.symp: 1. - (
-                            symp_transition[(a, r)][_SEIRLabel.needs_hospitalization] +
-                            symp_transition[(a, r)][_SEIRLabel.recovered]
+                            self.symp_transition[(a, r)][_SEIRLabel.needs_hospitalization] +
+                            self.symp_transition[(a, r)][_SEIRLabel.recovered]
                     ),
-                    _SEIRLabel.needs_hospitalization: symp_transition[(a, r)][_SEIRLabel.needs_hospitalization],
-                    _SEIRLabel.recovered: symp_transition[(a, r)][_SEIRLabel.recovered],
+                    _SEIRLabel.needs_hospitalization: self.symp_transition[(a, r)][_SEIRLabel.needs_hospitalization],
+                    _SEIRLabel.recovered: self.symp_transition[(a, r)][_SEIRLabel.recovered],
                 } for a in _AgeLimit for r in Risk
             },
             _SEIRLabel.needs_hospitalization: {
@@ -269,7 +269,7 @@ class SEIRModel(InfectionModel):
         divisor = from_symp_to_hosp_rate + divisor
         return dividend / divisor
 
-    def step(self, subject_state: Optional[IndividualInfectionState], subject_age: int,
+    def step(self, subject_state: Optional[PersonState], subject_age: int,
              subject_risk: Risk, infection_probability: float) -> IndividualInfectionState:
         """
         This method implements the SEIR model for the infection.
@@ -280,39 +280,60 @@ class SEIRModel(InfectionModel):
 
         :return: New SEIR state of the subject.
         """
+        # if subject_state.vaccination_state>0:
+        #     self.vaxx_person(subject_state)
+
         show_symptoms_states = {_SEIRLabel.symp, _SEIRLabel.hospitalized, _SEIRLabel.needs_hospitalization}
         pandemic_started = self._pandemic_started_counter >= self._pandemic_start_limit
         label = _SEIRLabel.susceptible if pandemic_started else _SEIRLabel.exposed
         self._pandemic_started_counter += 1 if not pandemic_started else 0
 
-        subject_state = cast(SEIRInfectionState, subject_state) if subject_state \
+        subject_state.infection_state = cast(SEIRInfectionState, subject_state.infection_state) if subject_state.infection_state \
             else SEIRInfectionState(summary=self._seir_to_summary[label],
                                     label=label,
                                     spread_probability=self._spread_probability.rvs(random_state=self._numpy_rng))
-        label = subject_state.label
+        label = subject_state.infection_state.label
         exposed_rnb = -1.
 
-        if subject_state.label == _SEIRLabel.susceptible:
+        if subject_state.infection_state.label == _SEIRLabel.susceptible:
             rnb = self._numpy_rng.uniform()
             if rnb < infection_probability:
                 label = _SEIRLabel.exposed
                 exposed_rnb = rnb
-        elif subject_state.label == _SEIRLabel.needs_hospitalization and subject_state.is_hospitalized:
+        elif subject_state.infection_state.label == _SEIRLabel.needs_hospitalization and subject_state.infection_state.is_hospitalized:
             label = _SEIRLabel.hospitalized
         else:
-
-            state_probs = self._model[subject_state.label][(_get_age_limit_from_age(subject_age), subject_risk)]
+            # print("New person")
+            # print(subject_state.infection_state.label)
+            if subject_state.infection_state.label == _SEIRLabel.symp:
+                factor = vacc_effect[subject_state.vaccination_state]
+                state_probs = {
+                    _SEIRLabel.symp: 1. - (
+                            factor*self.symp_transition[(_get_age_limit_from_age(subject_age), subject_risk)][_SEIRLabel.needs_hospitalization] +
+                            (1-factor)*self.symp_transition[(_get_age_limit_from_age(subject_age), subject_risk)][_SEIRLabel.recovered]
+                    ),
+                    _SEIRLabel.needs_hospitalization: factor*self.symp_transition[(_get_age_limit_from_age(subject_age), subject_risk)][_SEIRLabel.needs_hospitalization],
+                    _SEIRLabel.recovered: (1-factor)*self.symp_transition[(_get_age_limit_from_age(subject_age), subject_risk)][_SEIRLabel.recovered],
+                }
+            else:
+                state_probs = self._model[subject_state.infection_state.label][(_get_age_limit_from_age(subject_age), subject_risk)]
+            # print(state_probs)
             if len(state_probs) != 0:
                 probs = np.array(list(state_probs.values()))
                 assert abs(1. - sum(probs)) < 1e-3, f'Probabilities {probs} do not sum to one'
                 label = self._numpy_rng.choice(list(state_probs.keys()), p=probs)
 
         return SEIRInfectionState(summary=self._seir_to_summary[label],
-                                  spread_probability=subject_state.spread_probability,
+                                  spread_probability=subject_state.infection_state.spread_probability,
                                   exposed_rnb=exposed_rnb,
-                                  is_hospitalized=subject_state.is_hospitalized,
+                                  is_hospitalized=subject_state.infection_state.is_hospitalized,
                                   shows_symptoms=label in show_symptoms_states,
                                   label=label)
+
+    def vaxx_person(self, person : PersonState):
+        symp_transition_vaxx = vacc_effect[person.vaccination_state] * self.symp_transition
+
+
 
     def needs_contacts(self, subject_state: Optional[IndividualInfectionState]) -> bool:
         pandemic_started = self._pandemic_started_counter >= self._pandemic_start_limit
