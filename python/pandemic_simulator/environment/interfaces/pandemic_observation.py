@@ -22,6 +22,7 @@ class PandemicObservation:
     stage: np.ndarray
     infection_above_threshold: np.ndarray
     time_day: np.ndarray
+    vacc_summary : np.ndarray
     unlocked_non_essential_business_locations: Optional[np.ndarray] = None
 
     @classmethod
@@ -41,6 +42,7 @@ class PandemicObservation:
                                    stage=np.zeros((history_size, 1, 1)),
                                    infection_above_threshold=np.zeros((history_size, 1, 1)),
                                    time_day=np.zeros((history_size, 1, 1)),
+                                   vacc_summary=np.zeros((history_size, 1, 1)),
                                    unlocked_non_essential_business_locations=np.zeros((history_size, 1,
                                                                                        num_non_essential_business))
                                    if num_non_essential_business is not None else None)
@@ -55,6 +57,8 @@ class PandemicObservation:
         :param hist_index: history time index
         :param business_location_ids: business location ids
         """
+        num_vaxx_people = len([p for p in sim_state.id_to_person_state.values() if p.vaccination_state>0])
+
         assert hist_index < self.global_infection_summary.shape[0]
         if self.unlocked_non_essential_business_locations is not None and business_location_ids is not None:
             unlocked_non_essential_business_locations = np.asarray([int(not cast(NonEssentialBusinessLocationState,
@@ -70,6 +74,8 @@ class PandemicObservation:
         self.global_testing_summary[hist_index, 0] = gts
 
         self.stage[hist_index, 0] = sim_state.regulation_stage
+
+        self.vacc_summary[hist_index, 0] = num_vaxx_people
 
         self.infection_above_threshold[hist_index, 0] = int(sim_state.infection_above_threshold)
 

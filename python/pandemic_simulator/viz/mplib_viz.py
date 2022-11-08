@@ -25,6 +25,7 @@ class PlotType:
     location_visitor_visits: str = 'location_visitor_visits'
     infection_source = 'infection_source'
     cumulative_reward = 'cumulative_reward'
+    num_vaxxed_people : str = 'vacc_curve'
 
     @staticmethod
     def plot_order() -> List[str]:
@@ -66,6 +67,7 @@ class BaseMatplotLibViz(PandemicViz):
         self._stages = []
 
         self._gis_legend = []
+        self._vacc_summary = []
 
         plt.rc('axes', prop_cycle=cycler(color=inf_colors))
 
@@ -80,6 +82,7 @@ class BaseMatplotLibViz(PandemicViz):
 
         self._gis.append(obs.global_infection_summary)
         self._gts.append(obs.global_testing_summary)
+        self._vacc_summary.append(obs.vacc_summary)
         self._stages.append(obs.stage)
 
     def record_state(self, state: PandemicSimState) -> None:
@@ -94,6 +97,18 @@ class BaseMatplotLibViz(PandemicViz):
             self.record_obs(data)
         else:
             raise ValueError('Unsupported data type')
+
+    def plot_vacc_curve(self, ax: Optional[Axes] = None, **kwargs: Any) -> None:
+        ax = ax or plt.gca()
+        vacc = np.concatenate(self._vacc_summary).squeeze()
+        ax.plot(vacc)
+        ax.legend(['Vaccinated people'], loc=1)
+        ax.set_ylim(-0.1, self._num_persons + 1)
+        ax.set_title('Vaccinated people')
+        ax.set_xlabel('time (days)')
+        ax.set_ylabel('persons')
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
 
     def plot_gis(self, ax: Optional[Axes] = None, **kwargs: Any) -> None:
         ax = ax or plt.gca()

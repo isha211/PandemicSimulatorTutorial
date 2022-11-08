@@ -96,7 +96,7 @@ class PandemicSim:
         self._infection_threshold = infection_threshold
 
 
-        self.num_vaccines_per_day = 0.05*len(persons)
+        self.num_vaccines_per_day = 0.1*len(persons)
         self.num_old_people = len([p for p in persons if p.id.age>65])
         self.num_adult_people = len([p for p in persons if p.id.age<=65 and p.id.age>18])
         self.num_minors = len([p for p in persons if p.id.age<=18])
@@ -299,6 +299,7 @@ class PandemicSim:
         # call infection model steps
         if self._infection_update_interval.trigger_at_interval(self._state.sim_time):
             global_infection_summary = {s: 0 for s in sorted_infection_summary}
+            num_vacc = self.num_vaccines_per_day
             for person in self._id_to_person.values():
                 # infection model step
                 inf_prob = (1 - person.state.not_infection_probability)*vacc_effect[person.state.vaccination_state]
@@ -339,7 +340,6 @@ class PandemicSim:
                 #     if self._vacc_program.vacc_eligible(person, 3):
                 #         self._vacc_program.vacc_person(person.state)
 
-                num_vacc = self.num_vaccines_per_day
                 if self._vacc_program.vacc_eligible(person, self._state.sim_time.day, num_vacc):
                     if self._vacc_program.vacc_person(person, self._state.sim_time.day):
                         num_vacc -= 1

@@ -30,7 +30,7 @@ def run_pandemic_sim() -> None:
         viz.record(sim.state)
 
     # generate plots
-    viz.plot()
+    viz.plot(["gis", "critical_summary", "infection_source", 'vacc_curve'])
 
 
 if __name__ == '__main__':

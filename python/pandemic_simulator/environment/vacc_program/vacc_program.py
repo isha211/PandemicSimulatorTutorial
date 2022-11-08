@@ -3,7 +3,6 @@ from ..interfaces import PersonState, Person
 __all__ = ['VaccProgram']
 
 class VaccProgram:
-    vaccine_efficacy: float
     num_vaccines_per_day: int
     vaxx_start_day: int
     days_between_doses: int
@@ -11,8 +10,7 @@ class VaccProgram:
     num_adult_vaccinated:int
 
     def __init__(self, num_old_people, num_adult_people, num_minors):
-        self.vaccine_efficacy = 0.2
-        self.vaxx_start_day = 50
+        self.vaxx_start_day = 20
         self.days_between_doses = 7
         self.num_old_people = num_old_people
         self.num_adult_people = num_adult_people
@@ -33,13 +31,13 @@ class VaccProgram:
 
             if person.id.age<=65 and person.id.age>18:
                 if (person.state.vaccination_state==0
-                    and self.num_retired_vaccinated/self.num_old_people >=0.5) \
+                    and self.num_retired_vaccinated/self.num_old_people >=0.2) \
                         or person.state.vaccination_state>=1:
                     return True
 
             if person.id.age<18:
                 if (person.state.vaccination_state==0
-                    and self.num_adult_vaccinated/self.num_adult_people>=0.5) \
+                    and self.num_adult_vaccinated/self.num_adult_people>=0.2) \
                         or person.state.vaccination_state>=1:
                     return True
 
