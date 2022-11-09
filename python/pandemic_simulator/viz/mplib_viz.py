@@ -100,13 +100,14 @@ class BaseMatplotLibViz(PandemicViz):
 
     def plot_vacc_curve(self, ax: Optional[Axes] = None, **kwargs: Any) -> None:
         ax = ax or plt.gca()
-        vacc = np.concatenate(self._vacc_summary).squeeze()
+        vacc = np.vstack(self._vacc_summary).squeeze()
         ax.plot(vacc)
-        ax.legend(['Vaccinated people'], loc=1)
+        ax.legend(['1st dose', '2nd dose', '3rd dose'], loc='best')
         ax.set_ylim(-0.1, self._num_persons + 1)
         ax.set_title('Vaccinated people')
         ax.set_xlabel('time (days)')
         ax.set_ylabel('persons')
+        ax.grid()
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 

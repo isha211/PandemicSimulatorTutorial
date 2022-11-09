@@ -24,9 +24,9 @@ __all__ = ['PandemicSim', 'make_locations']
 
 vacc_effect = {
     0:1,
-    1:0.6,
-    2:0.36,
-    3:0.216
+    1:0.5,
+    2:0.5**2,
+    3:0.5**3
 }
 
 def make_locations(sim_config: PandemicSimConfig) -> List[Location]:
@@ -327,18 +327,6 @@ class PandemicSim:
                     new_test_result = self._pandemic_testing.test_person(person.state)
                     self._update_global_testing_state(new_test_result, person.state.test_result)
                     person.state.test_result = new_test_result
-
-                # if self._state.sim_time.day == self._vacc_program.phase_1_rollout:
-                #     if self._vacc_program.vacc_eligible(person, 1):
-                #         self._vacc_program.vacc_person(person.state)
-                #
-                # if self._state.sim_time.day == self._vacc_program.phase_2_rollout:
-                #     if self._vacc_program.vacc_eligible(person, 2):
-                #         self._vacc_program.vacc_person(person.state)
-                #
-                # if self._state.sim_time.day == self._vacc_program.phase_3_rollout:
-                #     if self._vacc_program.vacc_eligible(person, 3):
-                #         self._vacc_program.vacc_person(person.state)
 
                 if self._vacc_program.vacc_eligible(person, self._state.sim_time.day, num_vacc):
                     if self._vacc_program.vacc_person(person, self._state.sim_time.day):

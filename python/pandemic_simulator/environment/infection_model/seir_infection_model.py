@@ -37,9 +37,9 @@ class _AgeLimit(Enum):
 
 vacc_effect = {
     0:1,
-    1:0.6,
-    2:0.36,
-    3:0.216
+    1:0.5,
+    2:0.5**2,
+    3:0.5**3
 }
 
 _DEFAULT_HOSP_RATE_SYMP = {

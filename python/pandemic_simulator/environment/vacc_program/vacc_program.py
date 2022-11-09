@@ -71,7 +71,7 @@ class VaccProgram:
                     self.num_adult_vaccinated += 1
             person.state.vaccination_state = person.state.vaccination_state + 1
             # person.state.infection_spread_multiplier *= (1 - person.state.vaccination_state*self.vaccine_efficacy)
-            person.state.infection_state.spread_probability *= 0.6
+            person.state.infection_state.spread_probability *= 0.5
             person.state.last_vaccinated_day = current_day
             return True
         return False
